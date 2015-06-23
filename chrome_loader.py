@@ -53,7 +53,7 @@ class ChromeLoader(Loader):
         # load the specified URL
         logging.info('Fetching page %s', url)
         try:
-            capturer_cmd = '%s -o %s %s' % (CHROME_HAR_CAPTURER, harpath, url)
+            capturer_cmd = '%s -v -r -o %s %s' % (CHROME_HAR_CAPTURER, harpath, url)
             logging.debug('Running capturer: %s', capturer_cmd)
             with Timeout(seconds=self._timeout+5):
                 subprocess.check_call(capturer_cmd.split(),\
@@ -116,7 +116,7 @@ class ChromeLoader(Loader):
             if self._ignore_certificate_errors:
                 options += ' --ignore-certificate-errors'
             # options for chrome-har-capturer
-            options += ' --remote-debugging-port=9222 --enable-benchmarking --enable-net-benchmarking'
+            options += ' about:blank --remote-debugging-port=9222 --enable-benchmarking --enable-net-benchmarking --disk-cache-dir=/dev/null'
 
             chrome_command = '%s %s' % (CHROME, options)
             logging.debug('Starting Chrome: %s', chrome_command)
