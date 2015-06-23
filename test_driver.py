@@ -5,14 +5,7 @@ import sys
 import logging
 import argparse
 import pprint
-from phantomjs_loader import PhantomJSLoader
 from chrome_loader import ChromeLoader
-from firefox_loader import FirefoxLoader
-from pythonrequests_loader import PythonRequestsLoader
-from curl_loader import CurlLoader
-from nodejs_loader import NodeJsLoader
-from tcp_loader import TCPLoader
-from tls_loader import TLSLoader
 
 def main():
     #loader = NodeJsLoader(num_trials=1, full_page=False, http2=True)
@@ -23,9 +16,9 @@ def main():
     #loader = TCPLoader(num_trials=2, full_page=False, user_agent='Test User Agent', check_protocol_availability=False)
     #loader = TLSLoader(num_trials=2, full_page=False, test_session_resumption=True, timeout=10)
     #loader = TLSLoader(num_trials=2, full_page=False, test_false_start=True, timeout=10)
-    loader = ChromeLoader(num_trials=1, disable_quic=False, disable_spdy=True,\
+    loader = ChromeLoader(num_trials=1, disable_quic=False, disable_spdy=False,\
         save_packet_capture=True, log_ssl_keys=True)
-    loader.load_pages(['https://www.google.com', 'https://www.youtube.com'])
+    loader.load_pages(['https://www.google.com'])
     print loader.urls
     pprint.pprint(dict(loader.load_results))
     pprint.pprint(dict(loader.page_results))
