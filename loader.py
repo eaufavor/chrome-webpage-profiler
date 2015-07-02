@@ -543,7 +543,7 @@ class Loader(object):
                             # start tcpdump if we want a packet capture
                             if self._save_packet_capture:
                                 pcap_path = self._outfile_path(url, suffix='.pcap', trial=i)
-                                tcpdump_command = 'sudo %s -w %s' % (TCPDUMP, pcap_path)
+                                tcpdump_command = '%s -w %s' % (TCPDUMP, pcap_path)
                                 logging.debug('Starting tcpdump: %s', tcpdump_command)
                                 tcpdump_proc = subprocess.Popen(tcpdump_command.split(),\
                                     stdout=self._stdout_file, stderr=self._stdout_file)
@@ -555,7 +555,7 @@ class Loader(object):
                             # stop tcpdump (if it's running)
                             if tcpdump_proc:
                                 logging.debug('Stopping tcpdump')
-                                os.system("sudo kill %s" % tcpdump_proc.pid)
+                                os.system("kill %s" % tcpdump_proc.pid)
                                 tcpdump_proc = None
 
                             if result.status == LoadResult.SUCCESS:
@@ -586,7 +586,7 @@ class Loader(object):
             try:
                 if tcpdump_proc:
                     logging.debug('Stopping tcpdump')
-                    os.system("sudo kill %s" % tcpdump_proc.pid)
+                    os.system("kill %s" % tcpdump_proc.pid)
                     tcpdump_proc = None
             except:
                 logging.exception('Error stopping tcpdump.')
