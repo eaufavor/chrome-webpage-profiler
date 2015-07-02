@@ -16,9 +16,10 @@ def main():
     #loader = TCPLoader(num_trials=2, full_page=False, user_agent='Test User Agent', check_protocol_availability=False)
     #loader = TLSLoader(num_trials=2, full_page=False, test_session_resumption=True, timeout=10)
     #loader = TLSLoader(num_trials=2, full_page=False, test_false_start=True, timeout=10)
-    loader = ChromeLoader(num_trials=2, disable_quic=False, disable_spdy=True,\
-        save_packet_capture=False, log_ssl_keys=False, save_har=True, disable_local_cache=False, headless=True)
-    loader.load_pages(['https://www.facebook.com/'])
+    loader = ChromeLoader(num_trials=2, disable_quic=True, disable_spdy=False, check_protocol_availability=False,\
+        save_packet_capture=True, log_ssl_keys=True, save_har=True, disable_local_cache=False, headless=False, ignore_certificate_errors=True)
+    #loader.load_pages(['https://http2.akamai.com/demo'])
+    loader.load_pages(['https://www.forever21.com'])
     print loader.urls
     pprint.pprint(dict(loader.load_results))
     #pprint.pprint(dict(loader.page_results))
