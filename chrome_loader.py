@@ -1,7 +1,5 @@
 import os
-import sys
 import subprocess
-import traceback
 import logging
 from time import sleep
 from loader import Loader, LoadResult, Timeout, TimeoutError
@@ -22,7 +20,7 @@ DISPLAY = ':99'
 
 class ChromeLoader(Loader):
     '''Subclass of :class:`Loader` that loads pages using Chrome.
-    
+
     .. note:: The :class:`ChromeLoader` currently does not time page load.
     .. note:: The :class:`ChromeLoader` currently does not save screenshots.
     .. note:: The :class:`ChromeLoader` currently does not support single-object loading (i.e., it always loads the full page).
@@ -42,34 +40,38 @@ class ChromeLoader(Loader):
         self._xvfb_proc = None
         self._chrome_proc = None
 
-    def _load_page(self, url, outdir, trial_num=-1):
+    def _load_page(self, test, _, trial_num=-1):
         # path for new HAR file
-        if self._save_har:
+        url = test['url']
+        if test['save_har']:
             harpath = self._outfile_path(url, suffix='.har', trial=trial_num)
         else:
             harpath = '/dev/null'
         logging.debug('Will save HAR to %s', harpath)
-    
+
         # load the specified URL
         logging.info('Fetching page %s', url)
         try:
-            capturer_cmd = '%s -d 5000 -r -v -o %s %s' % (CHROME_HAR_CAPTURER, harpath, url)
+            repeat_flag = '-r'
+            if test['fresh_view']:
+                repeat_flag = ''
+            capturer_cmd = '%s -d 5000 ' % CHROME_HAR_CAPTURER + repeat_flag + ' -v -o %s %s' % (harpath, url)
             logging.debug('Running capturer: %s', capturer_cmd)
             with Timeout(seconds=self._timeout+5):
                 subprocess.check_call(capturer_cmd.split(),\
                     stdout=self._stdout_file, stderr=subprocess.STDOUT)
-        
+
         except TimeoutError:
             logging.exception('* Timeout fetching %s', url)
             return LoadResult(LoadResult.FAILURE_TIMEOUT, url)
         except subprocess.CalledProcessError as e:
-            logging.exception('Error loading %s: %s\n%s' % (url, e, e.output))
+            logging.exception('Error loading %s: %s\n%s', url, e, e.output)
             return LoadResult(LoadResult.FAILURE_UNKNOWN, url)
         except Exception as e:
-            logging.exception('Error loading %s: %s' % (url, e))
+            logging.exception('Error loading %s: %s', url, e)
             return LoadResult(LoadResult.FAILURE_UNKNOWN, url)
         logging.debug('Page loaded.')
-    
+
         return LoadResult(LoadResult.SUCCESS, url, har=harpath)
 
 
@@ -91,7 +93,7 @@ class ChromeLoader(Loader):
                 retcode = self._xvfb_proc.poll()
                 if retcode != None:
                     raise("Xvfb proc exited with return code: %i" % retcode)
-            except Exception as e:
+            except Exception as _:
                 logging.exception("Error starting XFVB")
                 return False
             logging.debug('Started XVFB (DISPLAY=%s)', os.environ['DISPLAY'])
@@ -99,8 +101,8 @@ class ChromeLoader(Loader):
         if self._log_ssl_keys:
             keylog_file = os.path.join(self._outdir, 'ssl_keylog')
             os.environ['SSLKEYLOGFILE'] = keylog_file
-            
-    
+
+
         # launch chrome with no cache and remote debug on
         try:
             # TODO: enable HTTP2
@@ -123,12 +125,12 @@ class ChromeLoader(Loader):
             self._chrome_proc = subprocess.Popen(chrome_command.split(),\
                 stdout=stdout, stderr=stderr)
             sleep(5)
-                
+
             # check if Xvfb failed to start and process terminated
             retcode = self._chrome_proc.poll()
             if retcode != None:
                 raise("Chrome proc exited with return code: %i" % retcode)
-        except Exception as e:
+        except Exception as _:
             logging.exception("Error starting Chrome")
             return False
         logging.debug('Started Chrome')
@@ -145,7 +147,7 @@ class ChromeLoader(Loader):
         try:
             subprocess.check_output('killall chrome'.split())
         except Exception as e:
-            logging.warning('Problem killing all chrome processes (maybe there were none): %s' % e)
+            logging.warning('Problem killing all chrome processes (maybe there were none): %s', e)
 
         if self._xvfb_proc:
             logging.debug('Stopping XVFB')

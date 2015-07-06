@@ -45,7 +45,7 @@ class Timeout:
 
 class LoadResult(object):
     '''Status and stats for a single URL load (i.e., one trial).
-    
+
     :param status: The status of the page load.
     :param url: The original URL.
     :param final_url: The final URL (maybe be different if we were redirected).
@@ -57,7 +57,7 @@ class LoadResult(object):
     :param tcp_fast_open_supported: True if TCP fast open was used successfully;
         False otherwise or unknown
     '''
-    
+
     # Status constants
     SUCCESS = 'SUCCESS' #: Page load was successful
     FAILURE_TIMEOUT = 'FAILURE_TIMEOUT' #: Page load timed out
@@ -139,7 +139,7 @@ class LoadResult(object):
         '''Bool indicating whether or not TLS false start succeeded for this
             connection.'''
         return self._tls_false_start_supported
-    
+
     @property
     def tls_session_resumption_supported(self):
         '''Bool indicating whether or not TLS session resumption succeeded for this
@@ -155,12 +155,12 @@ class LoadResult(object):
 
 class PageResult(object):
     '''Status and stats for one URL (all trials).
-    
+
     :param url: The original URL.
     :param status: The overall status of all trials.
     :param load_results: List of individual :class:`LoadResult` objects
     '''
-    
+
     # Status constants
     SUCCESS = 'SUCCESS' #: All trials were successful
     PARTIAL_SUCCESS = 'PARTIAL_SUCCESS' #: some trials were successful
@@ -243,34 +243,34 @@ class PageResult(object):
         '''A list of bools indicating whether or not TCP fast open succeeded
             for each load.'''
         return self._tcp_fast_open_support_statuses
-    
+
     @property
     def tls_false_start_support_statuses(self):
         '''A list of bools indicating whether or not TLS false start succeeded
             for each load.'''
         return self._tls_false_start_support_statuses
-    
+
     @property
     def tls_session_resumption_support_statuses(self):
-        '''A list of bools indicating whether or not TLS session resumption 
+        '''A list of bools indicating whether or not TLS session resumption
             succeeded for each load.'''
         return self._tls_session_resumption_support_statuses
-    
+
     @property
     def mean_time(self):
         '''Mean load time across all trials.'''
         return numpy.mean(self.times)
-    
+
     @property
     def median_time(self):
         '''Median load time across all trials.'''
         return numpy.median(self.times)
-    
+
     @property
     def stddev_time(self):
         '''Standard deviation of load time across all trials.'''
         return numpy.std(self.times)
-    
+
     def __str__(self):
         return 'PageResult (%s): %s' % (self._status,  pprint.saferepr(self.__dict__))
 
@@ -351,14 +351,14 @@ class Loader(object):
         self._disable_spdy = disable_spdy
         self._log_ssl_keys = log_ssl_keys
         self._ignore_certificate_errors = ignore_certificate_errors
-        
+
         # cummulative list of all URLs (one per trial)
         self._urls = []
 
         # Map URLs to lists of LoadResults (there will be multiple results per
         # URL if there are multiple trials)
         self._load_results = defaultdict(list)
-        
+
         # Map URLs to PageResults (there is only one PageResult per URL; it
         # summarizes the LoadResults for the individual trials)
         self._page_results = {}
@@ -369,7 +369,7 @@ class Loader(object):
         # if self._stdout_filename is set, this var will hold the file object
         self._stdout_file = None
 
-    
+
 
 
     ##
@@ -409,7 +409,7 @@ class Loader(object):
         orig_protocol = urlparse.urlparse(url).scheme
         logging.debug('Checking if %s can be accessed using %s'\
             % (url, orig_protocol))
-    
+
         # try to fetch the page with the specified protocol
         response = None
         try:
@@ -418,7 +418,7 @@ class Loader(object):
                 if self._user_agent:
                     headers['User-Agent'] = self._user_agent
                 response = requests.get(url, timeout=self._timeout,\
-                    headers=headers, verify=False) 
+                    headers=headers, verify=False)
         except requests.exceptions.ConnectionError as e:
             logging.debug('Could not connect to %s: %s', url, e)
             return False
@@ -431,7 +431,7 @@ class Loader(object):
         except Exception as e:
             logging.exception('Error requesting %s: %s', url, e)
             return False
-    
+
         # if we got a response, check if we changed protocols
         final_protocol = urlparse.urlparse(response.url).scheme
         if orig_protocol == final_protocol:
@@ -442,7 +442,7 @@ class Loader(object):
     def _setup(self):
         '''Subclasses can override to prepare (e.g., launch Xvfb)'''
         return True
-    
+
     def __setup(self):
         '''Private setup method for Loader superclass'''
         if self._stdout_filename:
@@ -458,7 +458,7 @@ class Loader(object):
     def _teardown(self):
         '''Subclasses can override to clean up (e.g., kill Xvfb)'''
         return True
-    
+
     def __teardown(self):
         '''Private teardown method for Loader superclass'''
         child_ret = self._teardown()
@@ -490,7 +490,7 @@ class Loader(object):
     def load_results(self):
         '''A dict mapping URLs to a list of :class:`LoadResult`.'''
         return self._load_results
-    
+
     @property
     def page_results(self):
         '''A dict mapping URLs to a :class:`PageResult`.'''
@@ -501,15 +501,15 @@ class Loader(object):
         '''Number of times the loader was restarted (e.g., rebooted browser
         process) due to failures if restart_on_fail is True.'''
         return self._num_restarts
-    
-    
+
+
 
     ##
     ## Public methods
     ##
-    def load_pages(self, urls):
+    def load_pages(self, tests):
         '''Load each URL in `urls` `num_trials` times and collect stats.
-        
+
         :param urls: list of URLs to load
         '''
         tcpdump_proc = None  # if we use tcpdump, keep a handle to the process
@@ -518,12 +518,14 @@ class Loader(object):
                 logging.error('Error setting up loader')
                 return
 
-            for url in urls:
-
+            for test in tests['tests']:
+                url = test['url']
                 # make sure URL is well-formed (e.g., has protocol, etc.)
                 url = self._check_url(url)
 
                 # make sure URL is accessible over specified protocol
+                # this will break when testing akamai new h2
+                """
                 if self._check_protocol_availability and \
                     not self._check_protocol_available(url):
                     logging.info('%s is not accessible', url)
@@ -531,9 +533,10 @@ class Loader(object):
                     self._page_results[url] = PageResult(url,\
                         status=PageResult.FAILURE_NOT_ACCESSIBLE)
                     continue
+                """
 
                 # If all is well, load URL num_trials times
-                for i in range(0, self._num_trials):
+                for i in range(0, test['num_trials']):
                     try:
                         # if load fails, keep trying self._retries_per_trial times
                         tries_so_far = 0
@@ -541,16 +544,19 @@ class Loader(object):
                             tries_so_far += 1
 
                             # start tcpdump if we want a packet capture
-                            if self._save_packet_capture:
-                                pcap_path = self._outfile_path(url, suffix='.pcap', trial=i)
-                                tcpdump_command = '%s -w %s' % (TCPDUMP, pcap_path)
-                                logging.debug('Starting tcpdump: %s', tcpdump_command)
-                                tcpdump_proc = subprocess.Popen(tcpdump_command.split(),\
+                            if test['save_packet_capture']:
+                                prefix = test['packet_capture_file_name']
+                                if not prefix:
+                                    prefix = url
+                                pcap_path = self._outfile_path(prefix, suffix='.pcap', trial=i)
+                                tcpdump_command = [TCPDUMP, '-w', pcap_path, 'port not 22']
+                                logging.debug('Starting tcpdump: %s', ' '.join(tcpdump_command))
+                                tcpdump_proc = subprocess.Popen(tcpdump_command,\
                                     stdout=self._stdout_file, stderr=self._stdout_file)
 
                             # load the page
-                            result = self._load_page(url, self._outdir, i)
-                            logging.debug('Trial %d, try %d: %s' % (i, tries_so_far, result))
+                            result = self._load_page(test, self._outdir, i)
+                            logging.debug('Trial %d, try %d: %s', i, tries_so_far, result)
 
                             # stop tcpdump (if it's running)
                             if tcpdump_proc:
@@ -577,8 +583,10 @@ class Loader(object):
                             traceback.format_exc())
 
                 # Save PageResult summarizing the individual trial LoadResults
-                self._page_results[url] = PageResult(url,\
-                    load_results=self._load_results[url])
+                if url not in self._page_results:
+                    self._page_results[url] = []
+                self._page_results[url].append(PageResult(url,\
+                    load_results=self._load_results[url]))
         except Exception as e:
             logging.exception('Error loading pages: %s\n%s', e, traceback.format_exc())
         finally:
