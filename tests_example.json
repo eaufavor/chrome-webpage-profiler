@@ -11,7 +11,7 @@
             "har_file_name": "cmu_har2",
             "packet_capture_file_name": "cmu_dump2",
             "fresh_view": false
-        },
+        }
     ],
     "default": {
         "log_ssl_keys": true,
