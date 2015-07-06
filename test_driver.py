@@ -41,32 +41,10 @@ def prepare_tests_settings(tests):
     return
 
 
-def main():
+def main(fileName):
 
-    #with open('/Users/ywu/cwpf_test/cmu_http.har', 'r') as f:
-    #    tests = json.load(f)
-    tests = {'tests':
-        [
-            {
-                'url':'https://www.cmu.edu',
-                'har_file_name': 'cmu_har',
-                'packet_capture_file_name': 'cmu_dump',
-                'fresh_view': True
-            },
-            {
-                'url':'https://www.cmu.edu',
-                'har_file_name': 'cmu_har2',
-                'packet_capture_file_name': 'cmu_dump2',
-                'fresh_view': False
-            }
-        ],
-        'default':{
-            'log_ssl_keys': True,
-            'headless': True,
-            'save_har': True,
-            'save_packet_capture': True
-            }
-        }
+    with open(fileName, 'r') as f:
+        tests = json.load(f)
     prepare_tests_settings(tests)
     default = tests['default']
 
@@ -97,7 +75,7 @@ if __name__ == "__main__":
         try:
             os.makedirs(args.outdir)
         except Exception as _:
-            logging.getLogger(__name__).error('Error making output directory: %s' % args.outdir)
+            logging.getLogger(__name__).error('Error making output directory: %s', args.outdir)
             sys.exit(-1)
 
     # set up logging
@@ -112,4 +90,4 @@ if __name__ == "__main__":
         level = level
     )
 
-    main()
+    main(args.tests)
