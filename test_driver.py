@@ -10,7 +10,7 @@ from chrome_loader import ChromeLoader
 
 GLOBAL_DEFAULT = {'headless': True, 'log_ssl_keys': False, 'disable_quic': True,
                   'disable_spdy': False, 'ignore_certificate_errors': False}
-LOCAL_DEFAULT = {'num_trails': 1, 'save_har': True, 'save_packet_capture': False,
+LOCAL_DEFAULT = {'num_trials': 1, 'save_har': True, 'save_packet_capture': False,
                  'fresh_view': True}
 PRIVATE_DEFAULT = {'har_file_name': None, 'packet_capture_file_name': None}
 
@@ -22,7 +22,7 @@ def prepare_tests_settings(tests):
         tests['default'] = {}
     for k in LOCAL_DEFAULT:
         if k not in tests['default']:
-            tests['default'] = LOCAL_DEFAULT[k]
+            tests['default'][k] = LOCAL_DEFAULT[k]
 
     for i in range(len(tests['tests'])):
         test = tests['tests'][i]
@@ -36,7 +36,7 @@ def prepare_tests_settings(tests):
 
     for k in GLOBAL_DEFAULT:
         if k not in tests['default']:
-            tests['default'] = GLOBAL_DEFAULT[k]
+            tests['default'][k] = GLOBAL_DEFAULT[k]
 
     return
 
@@ -68,14 +68,16 @@ def main():
             }
         }
     prepare_tests_settings(tests)
+    default = tests['default']
 
-    loader = ChromeLoader(disable_quic=tests['disable_quic'], disable_spdy=tests['disable_spdy'],
+    loader = ChromeLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
                           check_protocol_availability=False, save_packet_capture=True,
-                          log_ssl_keys=tests['log_ssl_keys'], save_har=True, disable_local_cache=False,
-                          headless=tests['headless'], ignore_certificate_errors=tests['ignore_certificate_errors'])
+                          log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
+                          headless=default['headless'], ignore_certificate_errors=default['ignore_certificate_errors'])
     #loader.load_pages(['https://http2.akamai.com/demo'])
 
     #loader.load_pages(['https://www.forever21.com'])
+    print tests
     loader.load_pages(tests)
     print loader.urls
     pprint.pprint(dict(loader.load_results))

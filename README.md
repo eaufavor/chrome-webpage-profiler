@@ -11,7 +11,7 @@ Settings may appear in each test from `tests`, or in `default`.
 - packet_capture_file_name (url): the name of .pcap file
 
 ######A settings parameter in `default` will be used if it is not present in a test. The settings are:
-- num_trails (1): how many trails for a single test
+- num_trials (1): how many trials for a single test
 - save_har (TRUE): save HAR file or not
 - save_packet_capture (FALSE): dump traffic with tcpdump or not
 - fresh_view (TRUE): clean memory cache before visiting the url or not

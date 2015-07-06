@@ -44,7 +44,8 @@ class ChromeLoader(Loader):
         # path for new HAR file
         url = test['url']
         if test['save_har']:
-            harpath = self._outfile_path(url, suffix='.har', trial=trial_num)
+            prefix = test['har_file_name'] if test['har_file_name'] else url
+            harpath = self._outfile_path(prefix, suffix='.har', trial=trial_num)
         else:
             harpath = '/dev/null'
         logging.debug('Will save HAR to %s', harpath)
