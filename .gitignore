@@ -1,4 +1,5 @@
 *.pyc
 *.pcap
-*.log
+*.har
+ssl_keylog
 *.json
