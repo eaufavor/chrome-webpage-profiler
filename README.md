@@ -9,6 +9,7 @@ Settings may appear in each test from `tests`, or in `default`.
 - url: the url of the page to be tested (This should not be in `default`)
 - har_file_name (url): the name of saved HAR file or not
 - packet_capture_file_name (url): the name of .pcap file
+- preload ([]): a list of objects(urls) to be loaded in memory cache before fetching the url
 
 ######A settings parameter in `default` will be used if it is not present in a test. The settings are:
 - num_trials (1): how many trials for a single test

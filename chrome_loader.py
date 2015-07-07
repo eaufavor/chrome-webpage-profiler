@@ -40,6 +40,34 @@ class ChromeLoader(Loader):
         self._xvfb_proc = None
         self._chrome_proc = None
 
+    def _preload_objects(self, preloads, fresh):
+        logging.debug('preloading objects')
+        harpath = '/dev/null'
+        for url in preloads:
+            logging.debug('preloading %s', url)
+            try:
+                preload_flag = '-n'
+                if fresh:
+                    preload_flag = ''
+                    fresh = False
+                capturer_cmd = '%s -d 10 ' % CHROME_HAR_CAPTURER + preload_flag + ' -o %s %s' % (harpath, url)
+                logging.debug('Running capturer: %s', capturer_cmd)
+                with Timeout(seconds=self._timeout+5):
+                    subprocess.check_call(capturer_cmd.split(),\
+                        stdout=self._stdout_file, stderr=subprocess.STDOUT)
+            except TimeoutError:
+                logging.exception('* Timeout fetching %s', url)
+                return LoadResult(LoadResult.FAILURE_TIMEOUT, url)
+            except subprocess.CalledProcessError as e:
+                logging.exception('Error loading %s: %s\n%s', url, e, e.output)
+                return LoadResult(LoadResult.FAILURE_UNKNOWN, url)
+            except Exception as e:
+                logging.exception('Error loading %s: %s', url, e)
+                return LoadResult(LoadResult.FAILURE_UNKNOWN, url)
+            logging.debug('Object loaded.')
+
+
+
     def _load_page(self, test, _, trial_num=-1):
         # path for new HAR file
         url = test['url']
@@ -56,7 +84,7 @@ class ChromeLoader(Loader):
             repeat_flag = '-r'
             if test['fresh_view']:
                 repeat_flag = ''
-            capturer_cmd = '%s -d 5000 ' % CHROME_HAR_CAPTURER + repeat_flag + ' -v -o %s %s' % (harpath, url)
+            capturer_cmd = '%s -d 1000 ' % CHROME_HAR_CAPTURER + repeat_flag + ' -o %s %s' % (harpath, url)
             logging.debug('Running capturer: %s', capturer_cmd)
             with Timeout(seconds=self._timeout+5):
                 subprocess.check_call(capturer_cmd.split(),\

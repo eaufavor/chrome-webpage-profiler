@@ -12,7 +12,8 @@ GLOBAL_DEFAULT = {'headless': True, 'log_ssl_keys': False, 'disable_quic': True,
                   'disable_spdy': False, 'ignore_certificate_errors': False}
 LOCAL_DEFAULT = {'num_trials': 1, 'save_har': True, 'save_packet_capture': False,
                  'fresh_view': True}
-PRIVATE_DEFAULT = {'har_file_name': None, 'packet_capture_file_name': None}
+PRIVATE_DEFAULT = {'har_file_name': None, 'packet_capture_file_name': None,
+                   'preload': []}
 
 def prepare_tests_settings(tests):
     """ this fucntion load those parameters from default setting to each test

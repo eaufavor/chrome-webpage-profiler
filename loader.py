@@ -28,12 +28,12 @@ class Timeout:
     def __init__(self, seconds=10, error_message='Timeout'):
         self.seconds = seconds
         self.error_message = error_message
-    def handle_timeout(self, signum, frame):
+    def handle_timeout(self, __, _):
         raise TimeoutError(self.error_message)
     def __enter__(self):
         signal.signal(signal.SIGALRM, self.handle_timeout)
         signal.alarm(self.seconds)
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, _, __, ___):
         signal.alarm(0)
 
 
@@ -393,7 +393,7 @@ class Loader(object):
         '''Make sure URL is well-formed'''
 
         if '://' not in url:
-            logging.warn('URL %s has no protocol; using http.' % url)
+            logging.warn('URL %s has no protocol; using http.', url)
             url = 'http://%s' % url
 
         return url
@@ -408,7 +408,7 @@ class Loader(object):
 
         orig_protocol = urlparse.urlparse(url).scheme
         logging.debug('Checking if %s can be accessed using %s'\
-            % (url, orig_protocol))
+            , url, orig_protocol)
 
         # try to fetch the page with the specified protocol
         response = None
@@ -448,7 +448,7 @@ class Loader(object):
         if self._stdout_filename:
             try:
                 self._stdout_file = open(self._stdout_filename, 'a')
-            except:
+            except Exception:
                 logging.exception('Error opening stdout file: %s. Using parent\'s stdout.',\
                     self._stdout_filename)
                 self._stdout_file = None
@@ -542,7 +542,10 @@ class Loader(object):
                         tries_so_far = 0
                         while tries_so_far <= self._retries_per_trial:
                             tries_so_far += 1
-
+                            if test['preload']:
+                                self._preload_objects(test['preload'], test['fresh_view'])
+                                # clean cache in preload, should not clean the preloaded objects
+                                test['fresh_view'] = False
                             # start tcpdump if we want a packet capture
                             if test['save_packet_capture']:
                                 prefix = test['packet_capture_file_name']
@@ -596,6 +599,6 @@ class Loader(object):
                     logging.debug('Stopping tcpdump')
                     os.system("kill %s" % tcpdump_proc.pid)
                     tcpdump_proc = None
-            except:
+            except Exception:
                 logging.exception('Error stopping tcpdump.')
             self.__teardown()
