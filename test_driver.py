@@ -47,7 +47,7 @@ def main(fileName):
         tests = json.load(f)
     prepare_tests_settings(tests)
     default = tests['default']
-
+    # NOTE: some parameters are obsolete as they are overruled by the settings in tests
     loader = ChromeLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
                           check_protocol_availability=False, save_packet_capture=True,
                           log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
