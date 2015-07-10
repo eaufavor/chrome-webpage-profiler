@@ -8,6 +8,7 @@ import signal
 import pprint
 import traceback
 import numpy
+import time
 from collections import defaultdict
 
 
@@ -556,6 +557,8 @@ class Loader(object):
                                 logging.debug('Starting tcpdump: %s', ' '.join(tcpdump_command))
                                 tcpdump_proc = subprocess.Popen(tcpdump_command,\
                                     stdout=self._stdout_file, stderr=self._stdout_file)
+                                # sometimes tcpdump is slower than chrome to startup
+                                time.sleep(0.5)
 
                             # load the page
                             result = self._load_page(test, self._outdir, i)
