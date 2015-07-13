@@ -565,6 +565,8 @@ class Loader(object):
 
                             # load the page
                             result = self._load_page(test, self._outdir, i)
+                            if i is None:
+                                i = 0
                             logging.debug('Trial %d, try %d: %s', i, tries_so_far, result)
                             try:
                                 if test['save_screenshot']:
