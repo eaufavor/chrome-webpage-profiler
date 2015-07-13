@@ -565,9 +565,6 @@ class Loader(object):
 
                             # load the page
                             result = self._load_page(test, self._outdir, i)
-                            if i is None:
-                                i = 0
-                            logging.debug('Trial %d, try %d: %s', i, tries_so_far, result)
                             try:
                                 if test['save_screenshot']:
                                     prefix = test['screenshot_name'] if test['screenshot_name'] else url
@@ -581,7 +578,10 @@ class Loader(object):
                                 logging.exception('Error call %s: %s\n%s', SCREENSHOT, e, e.output)
                             except Exception as e:
                                 logging.exception('Error taking screenshot for %s: %s', url, e)
-                            logging.debug('Screenshot taken.')
+                            logging.debug('Screenshot taken')
+                            if i is None:
+                                i = 0
+                            logging.debug('Trial %d, try %d: %s', i, tries_so_far, result)
 
                             # stop tcpdump (if it's running)
                             if tcpdump_proc:
