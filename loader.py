@@ -539,7 +539,7 @@ class Loader(object):
 
                 # If all is well, load URL num_trials times
                 for i in range(0, test['num_trials']):
-                    if test['num_trials'] == 0:
+                    if test['num_trials'] == 1:
                         i = None
                     try:
                         # if load fails, keep trying self._retries_per_trial times
