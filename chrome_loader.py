@@ -41,6 +41,7 @@ class ChromeLoader(Loader):
 
         self._xvfb_proc = None
         self._chrome_proc = None
+        self._devnull = open(os.devnull, 'w')
 
     def _preload_objects(self, preloads, fresh):
         logging.debug('preloading objects')
@@ -116,7 +117,7 @@ class ChromeLoader(Loader):
                 xvfb_command = '%s %s -screen 0 1366x768x24 -ac' % (XVFB, DISPLAY)
                 logging.debug('Starting XVFB: %s', xvfb_command)
                 self._xvfb_proc = subprocess.Popen(xvfb_command.split(),\
-                    stdout=stdout, stderr=stderr)
+                    stdout=stdout, stderr=self._devnull)
                 sleep(2)
 
                 # check if Xvfb failed to start and process terminated
@@ -185,3 +186,4 @@ class ChromeLoader(Loader):
             logging.debug('Stopping XVFB')
             self._xvfb_proc.kill()
             self._xvfb_proc.wait()
+        self._devnull.close()
