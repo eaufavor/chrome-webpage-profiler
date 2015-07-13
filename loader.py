@@ -13,6 +13,7 @@ from collections import defaultdict
 
 
 TCPDUMP = '/usr/sbin/tcpdump'
+SCREENSHOT = 'scrot'
 
 
 ################################################################################
@@ -563,6 +564,20 @@ class Loader(object):
                             # load the page
                             result = self._load_page(test, self._outdir, i)
                             logging.debug('Trial %d, try %d: %s', i, tries_so_far, result)
+                            try:
+                                if test['save_screenshot']:
+                                    prefix = test['screenshot_name'] if test['screenshot_name'] else url
+                                    sspath = self._outfile_path(prefix, suffix='.png', trial=i)
+                                    with Timeout(seconds=self._timeout+5):
+                                        subprocess.check_call([SCREENSHOT, '-u', sspath],\
+                                            stdout=self._stdout_file, stderr=subprocess.STDOUT)
+                            except TimeoutError:
+                                logging.exception('* Timeout taking screenshot for %s', url)
+                            except subprocess.CalledProcessError as e:
+                                logging.exception('Error call %s: %s\n%s', SCREENSHOT, e, e.output)
+                            except Exception as e:
+                                logging.exception('Error taking screenshot for %s: %s', url, e)
+                            logging.debug('Screenshot taken.')
 
                             # stop tcpdump (if it's running)
                             if tcpdump_proc:

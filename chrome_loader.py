@@ -91,15 +91,6 @@ class ChromeLoader(Loader):
             with Timeout(seconds=self._timeout+5):
                 subprocess.check_call(capturer_cmd.split(),\
                     stdout=self._stdout_file, stderr=subprocess.STDOUT)
-            if test['save_screenshot']:
-                prefix = test['screenshot_name'] if test['screenshot_name'] else url
-                sspath = self._outfile_path(prefix, suffix='.png', trial=trial_num)
-                with Timeout(seconds=self._timeout+5):
-                    subprocess.check_call(['scrot', '-u', sspath],\
-                        stdout=self._stdout_file, stderr=subprocess.STDOUT)
-
-
-
         except TimeoutError:
             logging.exception('* Timeout fetching %s', url)
             return LoadResult(LoadResult.FAILURE_TIMEOUT, url)
