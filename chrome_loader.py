@@ -108,7 +108,7 @@ class ChromeLoader(Loader):
 
     def _setup(self):
         stdout = self._stdout_file
-        stderr = self._stdout_file
+        #stderr = self._stdout_file
 
         if self._headless:
             # start a virtual display
@@ -155,7 +155,7 @@ class ChromeLoader(Loader):
             chrome_command = '%s %s' % (CHROME, options)
             logging.debug('Starting Chrome: %s', chrome_command)
             self._chrome_proc = subprocess.Popen(chrome_command.split(),\
-                stdout=stdout, stderr=stderr)
+                stdout=stdout, stderr=self._devnull)
             sleep(5)
 
             # check if Xvfb failed to start and process terminated
@@ -180,7 +180,7 @@ class ChromeLoader(Loader):
         try:
             subprocess.check_output('killall chrome'.split())
         except Exception as e:
-            logging.warning('Problem killing all chrome processes (maybe there were none): %s', e)
+            logging.info('Cannot Kill all remaing chrome processes (maybe there were none): %s', e)
 
         if self._xvfb_proc:
             logging.debug('Stopping XVFB')
