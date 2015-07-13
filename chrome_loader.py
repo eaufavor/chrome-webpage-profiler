@@ -157,7 +157,8 @@ class ChromeLoader(Loader):
             if self._ignore_certificate_errors:
                 options += ' --ignore-certificate-errors'
             # options for chrome-har-capturer
-            options += ' about:blank --remote-debugging-port=9222 --enable-benchmarking --enable-net-benchmarking --disk-cache-dir=/dev/null'
+            # options += ' about:blank --remote-debugging-port=9222 --enable-benchmarking --enable-net-benchmarking --disk-cache-dir=/tmp'
+            options += ' about:blank --remote-debugging-port=9222 --enable-benchmarking --enable-net-benchmarking'
 
             chrome_command = '%s %s' % (CHROME, options)
             logging.debug('Starting Chrome: %s', chrome_command)
@@ -179,7 +180,8 @@ class ChromeLoader(Loader):
     def _teardown(self):
         if self._chrome_proc:
             logging.debug('Stopping Chrome')
-            self._chrome_proc.kill()
+            self._chrome_proc.terminate()
+            #self._chrome_proc.kill()
             self._chrome_proc.wait()
 
         # kill any subprocesses chrome might have opened
