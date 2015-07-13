@@ -54,7 +54,6 @@ def main(fileName):
                           log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
                           headless=default['headless'], ignore_certificate_errors=default['ignore_certificate_errors'])
     loader.load_pages(tests)
-    print loader.urls
     pprint.pprint(dict(loader.load_results))
     #pprint.pprint(dict(loader.page_results))
 

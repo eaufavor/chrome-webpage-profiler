@@ -384,7 +384,7 @@ class Loader(object):
     def _outfile_path(self, url, suffix=None, trial=None):
         '''Returns a path for an output file (e.g., HAR, screenshot, pcap)'''
         filename = self._sanitize_url(url)
-        if trial:
+        if trial is not None:
             filename += '_trial%d' % trial
         if suffix:
             filename += suffix
