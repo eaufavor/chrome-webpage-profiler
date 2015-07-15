@@ -118,7 +118,7 @@ class ChromeLoader(Loader):
                 logging.debug('Starting XVFB: %s', xvfb_command)
                 self._xvfb_proc = subprocess.Popen(xvfb_command.split(),\
                     stdout=stdout, stderr=self._devnull)
-                sleep(2)
+                sleep(0.5)
 
                 # check if Xvfb failed to start and process terminated
                 retcode = self._xvfb_proc.poll()
@@ -156,7 +156,7 @@ class ChromeLoader(Loader):
             logging.debug('Starting Chrome: %s', chrome_command)
             self._chrome_proc = subprocess.Popen(chrome_command.split(),\
                 stdout=stdout, stderr=self._devnull)
-            sleep(5)
+            sleep(2)
 
             # check if Xvfb failed to start and process terminated
             retcode = self._chrome_proc.poll()

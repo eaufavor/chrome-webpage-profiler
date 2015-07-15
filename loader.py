@@ -385,7 +385,7 @@ class Loader(object):
         '''Returns a path for an output file (e.g., HAR, screenshot, pcap)'''
         filename = self._sanitize_url(url)
         if trial is not None:
-            filename += '_trial%d' % trial
+            filename += '_%d' % trial
         if suffix:
             filename += suffix
         return os.path.join(self._outdir, filename)
@@ -539,8 +539,6 @@ class Loader(object):
 
                 # If all is well, load URL num_trials times
                 for i in range(0, test['num_trials']):
-                    if test['num_trials'] == 1:
-                        i = None
                     try:
                         # if load fails, keep trying self._retries_per_trial times
                         tries_so_far = 0
@@ -579,8 +577,6 @@ class Loader(object):
                             except Exception as e:
                                 logging.exception('Error taking screenshot for %s: %s', url, e)
                             logging.debug('Screenshot taken')
-                            if i is None:
-                                i = 0
                             logging.debug('Trial %d, try %d: %s', i, tries_so_far, result)
 
                             # stop tcpdump (if it's running)
