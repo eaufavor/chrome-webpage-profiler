@@ -7,7 +7,7 @@ from loader import Loader, LoadResult, Timeout, TimeoutError
 CHROME = '/usr/bin/env google-chrome'
 CHROME_HAR_CAPTURER = '/usr/bin/env chrome-har-capturer'
 XVFB = '/usr/bin/env Xvfb'
-DISPLAY = ':99'
+DISPLAY = ':%s'%os.geteuid()
 
 # TODO: test if isntalled chrome can support HTTP2
 # TODO: pick different display if multiple instances are used at once
@@ -87,7 +87,7 @@ class ChromeLoader(Loader):
             repeat_flag = '-r'
             if test['fresh_view']:
                 repeat_flag = ''
-            capturer_cmd = '%s -d 1000 ' % CHROME_HAR_CAPTURER + repeat_flag + ' -o %s %s' % (harpath, url)
+            capturer_cmd = '%s -d 500 ' % CHROME_HAR_CAPTURER + repeat_flag + ' -o %s %s' % (harpath, url)
             logging.debug('Running capturer: %s', capturer_cmd)
             with Timeout(seconds=self._timeout+5):
                 subprocess.check_call(capturer_cmd.split(),\
@@ -184,6 +184,6 @@ class ChromeLoader(Loader):
 
         if self._xvfb_proc:
             logging.debug('Stopping XVFB')
-            self._xvfb_proc.kill()
+            self._xvfb_proc.terminate()
             self._xvfb_proc.wait()
         self._devnull.close()
