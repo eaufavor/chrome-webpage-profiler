@@ -87,7 +87,9 @@ class ChromeLoader(Loader):
             repeat_flag = '-r'
             if test['fresh_view']:
                 repeat_flag = ''
-            capturer_cmd = '%s -d 500 ' % CHROME_HAR_CAPTURER + repeat_flag + ' -o %s %s' % (harpath, url)
+            capturer_cmd = '%s -d 500 ' % CHROME_HAR_CAPTURER + repeat_flag +\
+                           ' -p %d'%(1000+os.geteuid()) +\
+                           ' -o %s %s' % (harpath, url)
             logging.debug('Running capturer: %s', capturer_cmd)
             with Timeout(seconds=self._timeout+5):
                 subprocess.check_call(capturer_cmd.split(),\
@@ -150,7 +152,7 @@ class ChromeLoader(Loader):
                 options += ' --ignore-certificate-errors'
             # options for chrome-har-capturer
             # options += ' about:blank --remote-debugging-port=9222 --enable-benchmarking --enable-net-benchmarking --disk-cache-dir=/tmp'
-            options += ' about:blank --remote-debugging-port=9222 --enable-benchmarking --enable-net-benchmarking'
+            options += ' about:blank --remote-debugging-port=%d --enable-benchmarking --enable-net-benchmarking'%(1000+os.geteuid())
 
             chrome_command = '%s %s' % (CHROME, options)
             logging.debug('Starting Chrome: %s', chrome_command)
