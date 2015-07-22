@@ -18,9 +18,9 @@ XVFB = '/usr/bin/env Xvfb'
 DISPLAY = ':%s'%os.geteuid()
 
 
-fireBugPath = './plugins/firebug-2.0.11.xpi'
-netExportPath = './plugins/netExport-0.9b7.xpi'
-fireStarterPath = './plugins/fireStarter-0.1a6.xpi'
+fireBugPath = os.path.join(os.path.dirname(__file__), './plugins/firebug-2.0.11.xpi')
+netExportPath = os.path.join(os.path.dirname(__file__), './plugins/netExport-0.9b7.xpi')
+fireStarterPath = os.path.join(os.path.dirname(__file__), './plugins/fireStarter-0.1a6.xpi')
 
 
 TIMINGS_JAVASCRIPT = '''
