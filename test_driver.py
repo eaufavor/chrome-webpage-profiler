@@ -10,7 +10,8 @@ from chrome_loader import ChromeLoader
 from firefox_loader import FirefoxLoader
 
 GLOBAL_DEFAULT = {'headless': True, 'log_ssl_keys': False, 'disable_quic': True,
-                  'disable_spdy': False, 'ignore_certificate_errors': False}
+                  'disable_spdy': False, 'ignore_certificate_errors': False,
+                  'browser': 'chrome'}
 LOCAL_DEFAULT = {'num_trials': 1, 'save_har': True, 'save_packet_capture': False,
                  'save_screenshot': True, 'fresh_view': True}
 PRIVATE_DEFAULT = {'har_file_name': None, 'packet_capture_file_name': None,
@@ -50,10 +51,19 @@ def main(fileName):
     prepare_tests_settings(tests)
     default = tests['default']
     # NOTE: some parameters are obsolete as they are overruled by the settings in tests
-    loader = FirefoxLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
-                          check_protocol_availability=False, save_packet_capture=True,
-                          log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
-                          headless=default['headless'], ignore_certificate_errors=default['ignore_certificate_errors'])
+    if default['browser'].lower() == 'chrome':
+        loader = ChromeLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
+                              check_protocol_availability=False, save_packet_capture=True,
+                              log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
+                              headless=default['headless'], ignore_certificate_errors=default['ignore_certificate_errors'])
+    elif default['browser'].lower() == 'firefox':
+        loader = FirefoxLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
+                               check_protocol_availability=False, save_packet_capture=True,
+                               log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
+                               headless=default['headless'], ignore_certificate_errors=default['ignore_certificate_errors'])
+    else:
+        logging.critical('Uknown browser %s', default['browser'].lower())
+        sys.exit(-1)
     loader.load_pages(tests)
     pprint.pprint(dict(loader.load_results))
     #pprint.pprint(dict(loader.page_results))
