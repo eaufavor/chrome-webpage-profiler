@@ -22,7 +22,6 @@ fireBugPath = os.path.join(os.path.dirname(__file__), './plugins/firebug-2.0.11.
 netExportPath = os.path.join(os.path.dirname(__file__), './plugins/netExport-0.9b7.xpi')
 fireStarterPath = os.path.join(os.path.dirname(__file__), './plugins/fireStarter-0.1a6.xpi')
 
-
 TIMINGS_JAVASCRIPT = '''
 var performance = window.performance || {};
 var timings = performance.timing || {};
@@ -79,12 +78,14 @@ class FirefoxLoader(Loader):
                 pass
             with Timeout(seconds=self._timeout+5):
                 self._selenium_driver.get(url)
-                WebDriverWait(self._selenium_driver, self._timeout).until(\
+                WebDriverWait(self._selenium_driver, 50000).until(\
                     lambda d: d.execute_script('return document.readyState') == 'complete')
                 logging.debug('Page loaded.')
+            sleep(5)
 
             #find the newest har file and rename it to want we want
             harfiles = glob.glob('./*.har')
+            logging.debug('Renaming harfiles: %s', str(harfiles))
             if harfiles:
                 newest = os.path.basename(max(harfiles, key=os.path.getctime))
                 if harpath:
@@ -149,7 +150,8 @@ class FirefoxLoader(Loader):
     def _setup_selenium(self):
         # prepare firefox selenium driver
         try:
-            profile = webdriver.FirefoxProfile()
+            #profile = webdriver.FirefoxProfile()
+            profile = webdriver.firefox.firefox_profile.FirefoxProfile()
             profile.add_extension(fireBugPath)
             profile.add_extension(netExportPath)
             profile.add_extension(fireStarterPath)
@@ -173,7 +175,7 @@ class FirefoxLoader(Loader):
             profile.set_preference("extensions.firebug.netexport.includeResponseBodies", False)
             profile.set_preference("extensions.firebug.netexport.exportFromBFCache", True)
             profile.set_preference("extensions.firebug.net.defaultPersist", False)
-            profile.set_preference("extensions.firebug.netexport.defaultLogDir", "/Users/ywu/ff_test")
+            profile.set_preference("extensions.firebug.netexport.defaultLogDir", os.getcwd())
             profile.update_preferences()
 
             """
