@@ -78,6 +78,8 @@ class FirefoxLoader(Loader):
             logging.debug('Renaming harfiles: %s', str(harfiles))
             if harfiles:
                 last_har = os.path.basename(max(harfiles, key=os.path.getctime))
+            else:
+                last_har = None
 
             with Timeout(seconds=self._timeout+5):
                 self._selenium_driver.get(url)
@@ -190,7 +192,7 @@ class FirefoxLoader(Loader):
             profile.set_preference("extensions.firebug.netexport.exportFromBFCache", True)
             profile.set_preference("extensions.firebug.net.defaultPersist", False)
             profile.set_preference("extensions.firebug.netexport.pageLoadedTimeout", 300)
-            profile.set_preference("extensions.firebug.netexport.timeout", 3000)
+            profile.set_preference("extensions.firebug.netexport.timeout", 30000)
             profile.set_preference("extensions.firebug.netexport.defaultLogDir", os.getcwd())
             profile.update_preferences()
 
@@ -282,7 +284,10 @@ class FirefoxLoader(Loader):
 
     def _teardown(self):
         if self._selenium_driver:
-            self._selenium_driver.quit()
+            try:
+                self._selenium_driver.quit()
+            except Exception as e:
+                logging.error('Failed to kill selenium, %s', e)
         if self._firefox_proc:
             logging.debug('Stopping Firefox')
             self._firefox_proc.terminate()
