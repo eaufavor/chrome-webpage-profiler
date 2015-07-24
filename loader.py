@@ -371,7 +371,8 @@ class Loader(object):
         # if self._stdout_filename is set, this var will hold the file object
         self._stdout_file = None
 
-
+        signal.signal(signal.SIGINT, self.__teardown)
+        signal.signal(signal.SIGTERM, self.__teardown)
 
 
     ##
