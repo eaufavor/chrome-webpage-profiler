@@ -472,7 +472,7 @@ class Loader(object):
         return child_ret
 
     def handle_kill(self, __, _):
-        self.__teardown()
+        raise KeyboardInterrupt('To be killed')
 
     def __getstate__(self):
         '''override getstate so we don't try to pickle the stdout file object'''
