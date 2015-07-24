@@ -189,8 +189,13 @@ class FirefoxLoader(Loader):
             profile.set_preference("extensions.firebug.netexport.includeResponseBodies", False)
             profile.set_preference("extensions.firebug.netexport.exportFromBFCache", True)
             profile.set_preference("extensions.firebug.net.defaultPersist", False)
+<<<<<<< HEAD
             profile.set_preference("extensions.firebug.netexport.pageLoadedTimeout", 300)
             profile.set_preference("extensions.firebug.netexport.timeout", 3000)
+=======
+            #profile.set_preference("extensions.firebug.netexport.pageLoadedTimeout", 150000)
+            #profile.set_preference("extensions.firebug.netexport.timeout", 100000)
+>>>>>>> 592856a295cc81d834ed8bc6b9d622eed8b48ffa
             profile.set_preference("extensions.firebug.netexport.defaultLogDir", os.getcwd())
             profile.update_preferences()
 
