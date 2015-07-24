@@ -74,12 +74,33 @@ class FirefoxLoader(Loader):
             if test['fresh_view']:
                 # TODO: how to clean cache?
                 pass
+            harfiles = glob.glob('./*.har')
+            logging.debug('Renaming harfiles: %s', str(harfiles))
+            if harfiles:
+                last_har = os.path.basename(max(harfiles, key=os.path.getctime))
+
             with Timeout(seconds=self._timeout+5):
                 self._selenium_driver.get(url)
-                WebDriverWait(self._selenium_driver, 50000).until(\
+                WebDriverWait(self._selenium_driver, 30000).until(\
                     lambda d: d.execute_script('return document.readyState') == 'complete')
                 logging.debug('Page loaded.')
-            sleep(5)
+
+            # get timing information
+            # http://www.w3.org/TR/navigation-timing/#processing-model
+            timings = self._selenium_driver.execute_script(TIMINGS_JAVASCRIPT)
+            load_time = (timings['loadEventEnd'] - timings['fetchStart']) / 1000.0
+
+            count = 0
+            while count < 31 - load_time:
+                harfiles = glob.glob('./*.har')
+                logging.debug('Renaming harfiles: %s', str(harfiles))
+                if harfiles:
+                    newest = os.path.basename(max(harfiles, key=os.path.getctime))
+                else:
+                    newest = None
+                if newest and newest != last_har:
+                    break
+                sleep(1)
 
             #find the newest har file and rename it to want we want
             harfiles = glob.glob('./*.har')
@@ -91,11 +112,6 @@ class FirefoxLoader(Loader):
                 else:
                     p = subprocess.Popen(['rm', newest])
                 p.wait()
-
-            # get timing information
-            # http://www.w3.org/TR/navigation-timing/#processing-model
-            timings = self._selenium_driver.execute_script(TIMINGS_JAVASCRIPT)
-            load_time = (timings['loadEventEnd'] - timings['fetchStart']) / 1000.0
 
             return LoadResult(LoadResult.SUCCESS, url, time=load_time,\
                 final_url=self._selenium_driver.current_url)
@@ -173,8 +189,8 @@ class FirefoxLoader(Loader):
             profile.set_preference("extensions.firebug.netexport.includeResponseBodies", False)
             profile.set_preference("extensions.firebug.netexport.exportFromBFCache", True)
             profile.set_preference("extensions.firebug.net.defaultPersist", False)
-            profile.set_preference("extensions.firebug.netexport.pageLoadedTimeout", 150000)
-            profile.set_preference("extensions.firebug.netexport.timeout", 100000)
+            profile.set_preference("extensions.firebug.netexport.pageLoadedTimeout", 300)
+            profile.set_preference("extensions.firebug.netexport.timeout", 3000)
             profile.set_preference("extensions.firebug.netexport.defaultLogDir", os.getcwd())
             profile.update_preferences()
 
