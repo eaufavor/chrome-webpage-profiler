@@ -72,10 +72,14 @@ class FirefoxLoader(Loader):
         try:
             # load page
             if test['fresh_view']:
-                # TODO: how to clean cache?
-                pass
+                # Start a new browser as there is no way to clear cache
+                if self._selenium_driver:
+                    self._selenium_driver.quit()
+                self._setup_selenium()
+            elif not self._selenium_driver:
+                # or this is the first run, start a new browser
+                self._setup_selenium()
             harfiles = glob.glob('./*.har')
-            logging.debug('Renaming harfiles: %s', str(harfiles))
             if harfiles:
                 last_har = os.path.basename(max(harfiles, key=os.path.getctime))
             else:
@@ -95,7 +99,6 @@ class FirefoxLoader(Loader):
             count = 0
             while count < 31 - load_time:
                 harfiles = glob.glob('./*.har')
-                logging.debug('Renaming harfiles: %s', str(harfiles))
                 if harfiles:
                     newest = os.path.basename(max(harfiles, key=os.path.getctime))
                 else:
@@ -128,6 +131,53 @@ class FirefoxLoader(Loader):
             logging.exception('Error loading %s: %s', url, e)
             return LoadResult(LoadResult.FAILURE_UNKNOWN, url)
 
+    def _load_page(self, test, outdir, trial_num=-1):
+        return self._load_page_selenium(test, outdir, trial_num)
+
+    def _preload_objects(self, preloads, fresh):
+        logging.debug('Preloading objects')
+        if fresh:
+            # Start a new browser as there is no way to clear cache
+            if self._selenium_driver:
+                self._selenium_driver.quit()
+            self._setup_selenium()
+        elif not self._selenium_driver:
+            self._setup_selenium()
+
+        for url in preloads:
+            logging.debug('preloading %s', url)
+            try:
+                harfiles = glob.glob('./*.har')
+                if harfiles:
+                    last_har = os.path.basename(max(harfiles, key=os.path.getctime))
+                else:
+                    last_har = None
+
+                with Timeout(seconds=self._timeout+5):
+                    self._selenium_driver.get(url)
+                    WebDriverWait(self._selenium_driver, 30000).until(\
+                        lambda d: d.execute_script('return document.readyState') == 'complete')
+                    logging.debug('object loaded.')
+
+                harfiles = glob.glob('./*.har')
+                if harfiles:
+                    newest = os.path.basename(max(harfiles, key=os.path.getctime))
+                    if newest != last_har:
+                        logging.debug('Removing harfile: %s', str(newest))
+                        p = subprocess.Popen(['rm', newest])
+                        p.wait()
+
+
+            except TimeoutError:
+                logging.exception('* Timeout fetching %s', url)
+                return LoadResult(LoadResult.FAILURE_TIMEOUT, url)
+            except TimeoutException:
+                logging.exception('Timeout fetching %s', url)
+                return LoadResult(LoadResult.FAILURE_TIMEOUT, url)
+            except Exception as e:
+                logging.exception('Error loading %s: %s', url, e)
+                return LoadResult(LoadResult.FAILURE_UNKNOWN, url)
+
 
     def _load_page_native(self, url, _, __):
         # load the specified URL (directly)
@@ -154,14 +204,6 @@ class FirefoxLoader(Loader):
         except Exception as e:
             logging.exception('Error loading %s: %s', url, e)
             return LoadResult(LoadResult.FAILURE_UNKNOWN, url)
-
-
-
-    def _load_page(self, test, outdir, trial_num=-1):
-        return self._load_page_selenium(test, outdir, trial_num)
-
-    def _preload_objects(self, preloads, fresh):
-        logging.debug('TODO: preloading objects')
 
     def _setup_selenium(self):
         # prepare firefox selenium driver
@@ -214,7 +256,7 @@ class FirefoxLoader(Loader):
             self._selenium_driver = webdriver.Firefox(firefox_profile=profile)
             sleep(1)
             # load a page other than about:blank
-            self._selenium_driver.get('file://'+os.getcwd())
+            self._selenium_driver.get('about:config')
         except Exception as _:
             logging.exception("Error making selenium driver")
             return False
@@ -280,7 +322,7 @@ class FirefoxLoader(Loader):
             keylog_file = './ssl_keylog'
             os.environ['SSLKEYLOGFILE'] = keylog_file
 
-        return self._setup_selenium()
+        return True
 
     def _teardown(self):
         if self._selenium_driver:
