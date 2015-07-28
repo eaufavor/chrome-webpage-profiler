@@ -158,6 +158,7 @@ class FirefoxLoader(Loader):
                     WebDriverWait(self._selenium_driver, 30000).until(\
                         lambda d: d.execute_script('return document.readyState') == 'complete')
                     logging.debug('object loaded.')
+                    sleep(0.5)
 
                 harfiles = glob.glob('./*.har')
                 if harfiles:

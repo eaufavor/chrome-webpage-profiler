@@ -53,7 +53,8 @@ class ChromeLoader(Loader):
                 if fresh:
                     preload_flag = ''
                     fresh = False
-                capturer_cmd = '%s -d 10 ' % CHROME_HAR_CAPTURER + preload_flag + ' -o %s %s' % (harpath, url)
+                capturer_cmd = '%s -d 10 ' % CHROME_HAR_CAPTURER + preload_flag +\
+                               ' -p %d '%(1000+os.geteuid()) + ' -o %s %s' % (harpath, url)
                 logging.debug('Running capturer: %s', capturer_cmd)
                 with Timeout(seconds=self._timeout+5):
                     subprocess.check_call(capturer_cmd.split(),\
@@ -125,7 +126,7 @@ class ChromeLoader(Loader):
                 # check if Xvfb failed to start and process terminated
                 retcode = self._xvfb_proc.poll()
                 if retcode != None:
-                    raise("Xvfb proc exited with return code: %i" % retcode)
+                    raise("Xvfb proc exited with return code: %d" % retcode)
             except Exception as _:
                 logging.exception("Error starting XFVB")
                 return False
