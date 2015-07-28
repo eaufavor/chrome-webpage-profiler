@@ -542,7 +542,9 @@ class Loader(object):
                 """
 
                 # If all is well, load URL num_trials times
+                should_be_fresh = test['fresh_view']
                 for i in range(0, test['num_trials']):
+                    test['fresh_view'] = should_be_fresh
                     try:
                         # if load fails, keep trying self._retries_per_trial times
                         tries_so_far = 0
