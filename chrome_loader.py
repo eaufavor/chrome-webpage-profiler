@@ -41,9 +41,9 @@ class ChromeLoader(Loader):
 
         self._xvfb_proc = None
         self._chrome_proc = None
-        self._devnull = open(os.devnull, 'w')
         self.DISPLAY = None
         self.debug_port = None
+        self._devnull = None
 
     def _preload_objects(self, preloads, fresh):
         logging.debug('preloading objects')
@@ -113,6 +113,7 @@ class ChromeLoader(Loader):
 
     def _setup(self, my_id=0):
         stdout = self._stdout_file
+        self._devnull = open(os.devnull, 'w')
         #stderr = self._stdout_file
         self.debug_port = (os.getuid()*10+my_id)%64536 + 1000 # valid port number 1000~65536
         if self._headless:
