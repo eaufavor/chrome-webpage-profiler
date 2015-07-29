@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 
-import os
-import sys
-import logging
-import argparse
-import pprint
-import json
+import os, sys, logging, argparse, pprint, json, time
 from chrome_loader import ChromeLoader
 from firefox_loader import FirefoxLoader
 from multiprocessing import Process, JoinableQueue
@@ -92,6 +87,21 @@ def loader_worker(my_id, default, job_queue, result_queue):
             job_queue.task_done()
 
 
+def check_alive(workers):
+    for worker in workers:
+        if worker.is_alive():
+            return True
+    return False
+def daemon_process(workers, queue):
+    while True:
+        time.sleep(1)
+        if not check_alive(workers):
+            break
+    #clean up
+    while not queue.empty():
+        _ = queue.get()
+        queue.task_done()
+
 def start_parallel_instances(default, job_queue, result_queue):
     workers = []
     for i in range(default['parallel']):
@@ -102,6 +112,8 @@ def start_parallel_instances(default, job_queue, result_queue):
         worker.daemon = True
         logging.info('Starting worker: %s', worker.name)
         worker.start()
+    daemon = Process(name='daemon', target=loader_worker, args=(workers, job_queue))
+    daemon.start()
     return workers
 
 def dispatch_parallel_tests(tests, queue):
@@ -113,7 +125,7 @@ def dispatch_parallel_tests(tests, queue):
 def teardown_parallel_instances(default, job_queue):
     for _ in range(default['parallel']):
         job_queue.put([None, -1])
-    job_queue.join()
+    time.sleep(0.5)
 
 def main(fileName):
 

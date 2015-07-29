@@ -130,7 +130,7 @@ class ChromeLoader(Loader):
                 # check if Xvfb failed to start and process terminated
                 retcode = self._xvfb_proc.poll()
                 if retcode != None:
-                    raise("Xvfb proc exited with return code: %d" % retcode)
+                    raise Exception("Xvfb proc exited with return code: %d" % retcode)
             except Exception as _:
                 logging.exception("Error starting XFVB")
                 return False
@@ -169,7 +169,7 @@ class ChromeLoader(Loader):
             # check if Xvfb failed to start and process terminated
             retcode = self._chrome_proc.poll()
             if retcode != None:
-                raise("Chrome proc exited with return code: %i" % retcode)
+                raise Exception("Chrome proc exited with return code: %i" % retcode)
         except Exception as _:
             logging.exception("Error starting Chrome")
             return False
