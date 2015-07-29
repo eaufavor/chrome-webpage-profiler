@@ -9,6 +9,7 @@ import json
 from chrome_loader import ChromeLoader
 from firefox_loader import FirefoxLoader
 from multiprocessing import Process, JoinableQueue
+from loader import LoadResult
 import traceback
 
 GLOBAL_DEFAULT = {'headless': True, 'log_ssl_keys': False, 'disable_quic': True,
@@ -68,6 +69,11 @@ def loader_worker(my_id, default, job_queue, result_queue):
             result = loader.load_page(testJob[0], testJob[1])
             if result:
                 result_queue.put(result)
+            if result.status() == LoadResult.FAILURE_TIMEOUT:
+                loader.teardown()
+                if not loader.setup(my_id):
+                    logging.error('Error setting up loader')
+                    return
         except Exception as e:
             logging.exception('Error loading pages: %s\n%s', e, traceback.format_exc())
             loader.teardown()
