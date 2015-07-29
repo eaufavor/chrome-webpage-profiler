@@ -56,7 +56,7 @@ class ChromeLoader(Loader):
                     preload_flag = ''
                     fresh = False
                 capturer_cmd = '%s -d 10 ' % CHROME_HAR_CAPTURER + preload_flag +\
-                               ' -p %d '%(1000+os.geteuid()) + ' -o %s %s' % (harpath, url)
+                               ' -p %d '%(self.debug_port) + ' -o %s %s' % (harpath, url)
                 logging.debug('Running capturer: %s', capturer_cmd)
                 with Timeout(seconds=self._timeout+5):
                     subprocess.check_call(capturer_cmd.split(),\
