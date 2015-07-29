@@ -8,10 +8,12 @@ import pprint
 import json
 from chrome_loader import ChromeLoader
 from firefox_loader import FirefoxLoader
+from multiprocessing import Process, JoinableQueue
+import traceback
 
 GLOBAL_DEFAULT = {'headless': True, 'log_ssl_keys': False, 'disable_quic': True,
                   'disable_spdy': False, 'ignore_certificate_errors': False,
-                  'browser': 'chrome'}
+                  'browser': 'chrome', 'parallel': 1}
 LOCAL_DEFAULT = {'num_trials': 1, 'save_har': True, 'save_packet_capture': False,
                  'save_screenshot': True, 'fresh_view': True}
 PRIVATE_DEFAULT = {'har_file_name': None, 'packet_capture_file_name': None,
@@ -43,6 +45,69 @@ def prepare_tests_settings(tests):
 
     return
 
+def loader_worker(my_id, default, job_queue, result_queue):
+    if default['browser'].lower() == 'chrome':
+        loader = ChromeLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
+                              check_protocol_availability=False, save_packet_capture=True,
+                              log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
+                              headless=default['headless'], ignore_certificate_errors=default['ignore_certificate_errors'])
+        if not loader.setup(my_id):
+            logging.error('Error setting up loader')
+            return
+    else:
+        # TODO: firefox
+        return
+
+    while True:
+        testJob = job_queue.get()
+        if testJob[1] < 0: # a reseved number to tell workers to quit
+            loader.teardown()
+            job_queue.task_done()
+            return
+        try:
+            result = loader.load_page(testJob[0], testJob[1])
+            if result:
+                result_queue.put(result)
+        except Exception as e:
+            logging.exception('Error loading pages: %s\n%s', e, traceback.format_exc())
+            loader.teardown()
+            if not loader.setup(my_id):
+                logging.error('Error setting up loader')
+                return
+        finally:
+            # stop tcpdump (if it's running)
+            try:
+                if loader.tcpdump_proc:
+                    logging.debug('Stopping tcpdump')
+                    os.system("kill %s" % loader.tcpdump_proc.pid)
+                    loader.tcpdump_proc = None
+            except Exception:
+                logging.exception('Error stopping tcpdump.')
+            job_queue.task_done()
+
+
+def start_parallel_instances(default, job_queue, result_queue):
+    workers = []
+    for i in range(default['parallel']):
+        worker = Process(name='loader_worker%d'%i, target=loader_worker, args=(i, default, job_queue, result_queue))
+        workers.append(worker)
+
+    for worker in workers:
+        worker.daemon = True
+        logging.info('Starting worker: %s', worker.name)
+        worker.start()
+    return workers
+
+def dispatch_parallel_tests(tests, queue):
+    for test in tests['tests']:
+        for i in range(0, test['num_trials']):
+            current_test = [test, i]
+            queue.put(current_test)
+
+def teardown_parallel_instances(default, job_queue):
+    for _ in range(default['parallel']):
+        job_queue.put([None, -1])
+    job_queue.join()
 
 def main(fileName):
 
@@ -50,22 +115,36 @@ def main(fileName):
         tests = json.load(f)
     prepare_tests_settings(tests)
     default = tests['default']
+    jobQueue = JoinableQueue()
+    resultQueue = JoinableQueue()
     # NOTE: some parameters are obsolete as they are overruled by the settings in tests
     if default['browser'].lower() == 'chrome':
-        loader = ChromeLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
-                              check_protocol_availability=False, save_packet_capture=True,
-                              log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
-                              headless=default['headless'], ignore_certificate_errors=default['ignore_certificate_errors'])
+        start_parallel_instances(default, jobQueue, resultQueue)
+        dispatch_parallel_tests(tests, jobQueue)
+        #loader = ChromeLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
+        #                      check_protocol_availability=False, save_packet_capture=True,
+        #                      log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
+        #                      headless=default['headless'], ignore_certificate_errors=default['ignore_certificate_errors'])
+        #loader.load_pages(tests)
+        #pprint.pprint(dict(loader.load_results))
+        jobQueue.join()
+        while not resultQueue.empty():
+            result = resultQueue.get(False)
+            print result
+            resultQueue.task_done()
+        teardown_parallel_instances(default, jobQueue)
+        jobQueue.join()
     elif default['browser'].lower() == 'firefox':
         loader = FirefoxLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
                                check_protocol_availability=False, save_packet_capture=True,
                                log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
                                headless=default['headless'], ignore_certificate_errors=default['ignore_certificate_errors'])
+        loader.load_pages(tests)
+        pprint.pprint(dict(loader.load_results))
     else:
         logging.critical('Uknown browser %s', default['browser'].lower())
         sys.exit(-1)
-    loader.load_pages(tests)
-    pprint.pprint(dict(loader.load_results))
+
     #pprint.pprint(dict(loader.page_results))
 
 if __name__ == "__main__":

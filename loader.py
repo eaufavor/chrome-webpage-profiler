@@ -8,7 +8,7 @@ import signal
 import pprint
 import traceback
 import numpy
-import time
+from time import sleep
 from collections import defaultdict
 
 
@@ -322,7 +322,7 @@ class Loader(object):
         certificate check fails
     '''
 
-    def __init__(self, outdir='.', num_trials=1, http2=False, timeout=30,\
+    def __init__(self, outdir='.', num_trials=1, http2=False, timeout=61,\
         disable_local_cache=True, disable_network_cache=False, full_page=True,\
         user_agent=None, headless=True, restart_on_fail=False, proxy=None,\
         save_har=False, save_screenshot=False, retries_per_trial=0,\
@@ -371,8 +371,10 @@ class Loader(object):
         # if self._stdout_filename is set, this var will hold the file object
         self._stdout_file = None
 
+        self.tcpdump_proc = None
+
         signal.signal(signal.SIGINT, self.handle_kill)
-        signal.signal(signal.SIGTERM, self.handle_kill)
+        #signal.signal(signal.SIGTERM, self.handle_kill)
 
 
     ##
@@ -442,11 +444,17 @@ class Loader(object):
         else:
             return False
 
-    def _setup(self):
+    def _preload_objects(self, _, __):
+        return
+
+    def _load_page(self, _, __, ___):
+        return
+
+    def _setup(self, _=0):
         '''Subclasses can override to prepare (e.g., launch Xvfb)'''
         return True
 
-    def __setup(self):
+    def __setup(self, my_id=0):
         '''Private setup method for Loader superclass'''
         if self._stdout_filename:
             try:
@@ -456,7 +464,10 @@ class Loader(object):
                     self._stdout_filename)
                 self._stdout_file = None
 
-        return self._setup()
+        return self._setup(my_id)
+
+    def setup(self, my_id=0):
+        return self.__setup(my_id)
 
     def _teardown(self):
         '''Subclasses can override to clean up (e.g., kill Xvfb)'''
@@ -470,6 +481,9 @@ class Loader(object):
             self._stdout_file.close()
 
         return child_ret
+
+    def teardown(self):
+        return self.__teardown()
 
     def handle_kill(self, __, _):
         raise KeyboardInterrupt('To be killed')
@@ -513,12 +527,87 @@ class Loader(object):
     ##
     ## Public methods
     ##
+
+    def load_page(self, the_test, trial_number):
+        test = dict(the_test)
+        url = test['url']
+        url = self._check_url(url)
+        i = trial_number
+        try:
+            # if load fails, keep trying self._retries_per_trial times
+            tries_so_far = 0
+            while tries_so_far <= self._retries_per_trial:
+                tries_so_far += 1
+                if test['preload']:
+                    self._preload_objects(test['preload'], test['fresh_view'])
+                    # clean cache in preload, should not clean the preloaded objects
+                    test['fresh_view'] = False
+                # start tcpdump if we want a packet capture
+                if test['save_packet_capture']:
+                    prefix = test['packet_capture_file_name']
+                    if not prefix:
+                        prefix = url
+                    pcap_path = self._outfile_path(prefix, suffix='.pcap', trial=i)
+                    tcpdump_command = [TCPDUMP, '-w', pcap_path, 'port not 22']
+                    logging.debug('Starting tcpdump: %s', ' '.join(tcpdump_command))
+                    self.tcpdump_proc = subprocess.Popen(tcpdump_command,\
+                        stdout=self._stdout_file, stderr=self._stdout_file)
+                    # sometimes tcpdump is slower than chrome to startup
+                    sleep(0.5)
+
+                # load the page
+                result = self._load_page(test, self._outdir, i)
+                try:
+                    if test['save_screenshot']:
+                        prefix = test['screenshot_name'] if test['screenshot_name'] else url
+                        sspath = self._outfile_path(prefix, suffix='.png', trial=i)
+                        if self.__class__.__name__ == 'FirefoxLoader':
+                            cmd = [SCREENSHOT, sspath]
+                        else:
+                            cmd = [SCREENSHOT, sspath]
+                        with Timeout(seconds=self._timeout+5):
+                            subprocess.check_call(cmd, stdout=self._stdout_file, stderr=subprocess.STDOUT)
+                        logging.debug('Screenshot taken')
+                except TimeoutError:
+                    logging.exception('* Timeout taking screenshot for %s', url)
+                except subprocess.CalledProcessError as e:
+                    logging.exception('Error call %s: %s\n%s', SCREENSHOT, e, e.output)
+                except Exception as e:
+                    logging.exception('Error taking screenshot for %s: %s', url, e)
+                logging.debug('Trial %d, try %d: %s', i, tries_so_far, result)
+
+                # stop tcpdump (if it's running)
+                if self.tcpdump_proc:
+                    logging.debug('Stopping tcpdump')
+                    os.system("kill %s" % self.tcpdump_proc.pid)
+                    self.tcpdump_proc = None
+
+                if result.status == LoadResult.SUCCESS:
+                    self._urls.append(url)
+                    self._load_results[url].append(result)
+                    break  # success, don't retry
+                elif tries_so_far > self._retries_per_trial:
+                    # this was the last try, record the failure
+                    self._urls.append(url)
+                    self._load_results[url].append(result)
+
+                if result.status == LoadResult.FAILURE_UNKNOWN and self._restart_on_fail:
+                    self.__teardown()
+                    self.__setup()
+                    self._num_restarts += 1
+
+        except Exception as e:
+            logging.exception('Error loading page %s: %s\n%s', url, e,\
+                traceback.format_exc())
+        return result
+
+
     def load_pages(self, tests):
         '''Load each URL in `urls` `num_trials` times and collect stats.
 
         :param urls: list of URLs to load
         '''
-        tcpdump_proc = None  # if we use tcpdump, keep a handle to the process
+        self.tcpdump_proc = None  # if we use tcpdump, keep a handle to the process
         try:
             if not self.__setup():
                 logging.error('Error setting up loader')
@@ -528,90 +617,9 @@ class Loader(object):
                 url = test['url']
                 # make sure URL is well-formed (e.g., has protocol, etc.)
                 url = self._check_url(url)
-
-                # make sure URL is accessible over specified protocol
-                # this will break when testing akamai new h2
-                """
-                if self._check_protocol_availability and \
-                    not self._check_protocol_available(url):
-                    logging.info('%s is not accessible', url)
-                    self._urls.append(url)
-                    self._page_results[url] = PageResult(url,\
-                        status=PageResult.FAILURE_NOT_ACCESSIBLE)
-                    continue
-                """
-
                 # If all is well, load URL num_trials times
-                should_be_fresh = test['fresh_view']
                 for i in range(0, test['num_trials']):
-                    test['fresh_view'] = should_be_fresh
-                    try:
-                        # if load fails, keep trying self._retries_per_trial times
-                        tries_so_far = 0
-                        while tries_so_far <= self._retries_per_trial:
-                            tries_so_far += 1
-                            if test['preload']:
-                                self._preload_objects(test['preload'], test['fresh_view'])
-                                # clean cache in preload, should not clean the preloaded objects
-                                test['fresh_view'] = False
-                            # start tcpdump if we want a packet capture
-                            if test['save_packet_capture']:
-                                prefix = test['packet_capture_file_name']
-                                if not prefix:
-                                    prefix = url
-                                pcap_path = self._outfile_path(prefix, suffix='.pcap', trial=i)
-                                tcpdump_command = [TCPDUMP, '-w', pcap_path, 'port not 22']
-                                logging.debug('Starting tcpdump: %s', ' '.join(tcpdump_command))
-                                tcpdump_proc = subprocess.Popen(tcpdump_command,\
-                                    stdout=self._stdout_file, stderr=self._stdout_file)
-                                # sometimes tcpdump is slower than chrome to startup
-                                time.sleep(0.5)
-
-                            # load the page
-                            result = self._load_page(test, self._outdir, i)
-                            try:
-                                if test['save_screenshot']:
-                                    prefix = test['screenshot_name'] if test['screenshot_name'] else url
-                                    sspath = self._outfile_path(prefix, suffix='.png', trial=i)
-                                    if self.__class__.__name__ == 'FirefoxLoader':
-                                        cmd = [SCREENSHOT, sspath]
-                                    else:
-                                        cmd = [SCREENSHOT, '-u', sspath]
-                                    with Timeout(seconds=self._timeout+5):
-                                        subprocess.check_call(cmd, stdout=self._stdout_file, stderr=subprocess.STDOUT)
-                                    logging.debug('Screenshot taken')
-                            except TimeoutError:
-                                logging.exception('* Timeout taking screenshot for %s', url)
-                            except subprocess.CalledProcessError as e:
-                                logging.exception('Error call %s: %s\n%s', SCREENSHOT, e, e.output)
-                            except Exception as e:
-                                logging.exception('Error taking screenshot for %s: %s', url, e)
-                            logging.debug('Trial %d, try %d: %s', i, tries_so_far, result)
-
-                            # stop tcpdump (if it's running)
-                            if tcpdump_proc:
-                                logging.debug('Stopping tcpdump')
-                                os.system("kill %s" % tcpdump_proc.pid)
-                                tcpdump_proc = None
-
-                            if result.status == LoadResult.SUCCESS:
-                                self._urls.append(url)
-                                self._load_results[url].append(result)
-                                break  # success, don't retry
-                            elif tries_so_far > self._retries_per_trial:
-                                # this was the last try, record the failure
-                                self._urls.append(url)
-                                self._load_results[url].append(result)
-
-                            if result.status == LoadResult.FAILURE_UNKNOWN and self._restart_on_fail:
-                                self.__teardown()
-                                self.__setup()
-                                self._num_restarts += 1
-
-                    except Exception as e:
-                        logging.exception('Error loading page %s: %s\n%s', url, e,\
-                            traceback.format_exc())
-
+                    self.load_page(test, i)
                 # Save PageResult summarizing the individual trial LoadResults
                 if url not in self._page_results:
                     self._page_results[url] = []
@@ -622,10 +630,10 @@ class Loader(object):
         finally:
             # stop tcpdump (if it's running)
             try:
-                if tcpdump_proc:
+                if self.tcpdump_proc:
                     logging.debug('Stopping tcpdump')
-                    os.system("kill %s" % tcpdump_proc.pid)
-                    tcpdump_proc = None
+                    os.system("kill %s" % self.tcpdump_proc.pid)
+                    self.tcpdump_proc = None
             except Exception:
                 logging.exception('Error stopping tcpdump.')
             self.__teardown()

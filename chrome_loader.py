@@ -7,7 +7,7 @@ from loader import Loader, LoadResult, Timeout, TimeoutError
 CHROME = '/usr/bin/env google-chrome'
 CHROME_HAR_CAPTURER = '/usr/bin/env chrome-har-capturer'
 XVFB = '/usr/bin/env Xvfb'
-DISPLAY = ':%s'%os.geteuid()
+#DISPLAY = ':%s'%os.geteuid()
 
 # TODO: test if isntalled chrome can support HTTP2
 # TODO: pick different display if multiple instances are used at once
@@ -42,6 +42,8 @@ class ChromeLoader(Loader):
         self._xvfb_proc = None
         self._chrome_proc = None
         self._devnull = open(os.devnull, 'w')
+        self.DISPLAY = None
+        self.debug_port = None
 
     def _preload_objects(self, preloads, fresh):
         logging.debug('preloading objects')
@@ -89,7 +91,7 @@ class ChromeLoader(Loader):
             if test['fresh_view']:
                 repeat_flag = ''
             capturer_cmd = '%s -d 500 ' % CHROME_HAR_CAPTURER + repeat_flag +\
-                           ' -p %d'%(1000+os.geteuid()) +\
+                           ' -p %d'%self.debug_port +\
                            ' -o %s %s' % (harpath, url)
             logging.debug('Running capturer: %s', capturer_cmd)
             with Timeout(seconds=self._timeout+5):
@@ -109,15 +111,16 @@ class ChromeLoader(Loader):
         return LoadResult(LoadResult.SUCCESS, url, har=harpath)
 
 
-    def _setup(self):
+    def _setup(self, my_id=0):
         stdout = self._stdout_file
         #stderr = self._stdout_file
-
+        self.debug_port = (os.getuid()*10+my_id)%64536 + 1000 # valid port number 1000~65536
         if self._headless:
             # start a virtual display
             try:
-                os.environ['DISPLAY'] = DISPLAY
-                xvfb_command = '%s %s -screen 0 1366x768x24 -ac' % (XVFB, DISPLAY)
+                self.DISPLAY = ":%s"%(os.geteuid()*10+my_id)
+                os.environ['DISPLAY'] = self.DISPLAY
+                xvfb_command = '%s %s -screen 0 1366x768x24 -ac' % (XVFB, self.DISPLAY)
                 logging.debug('Starting XVFB: %s', xvfb_command)
                 self._xvfb_proc = subprocess.Popen(xvfb_command.split(),\
                     stdout=stdout, stderr=self._devnull)
@@ -153,7 +156,8 @@ class ChromeLoader(Loader):
                 options += ' --ignore-certificate-errors'
             # options for chrome-har-capturer
             # options += ' about:blank --remote-debugging-port=9222 --enable-benchmarking --enable-net-benchmarking --disk-cache-dir=/tmp'
-            options += ' about:blank --remote-debugging-port=%d --enable-benchmarking --enable-net-benchmarking'%(1000+os.geteuid())
+            options += ' about:blank --remote-debugging-port=%d --user-data-dir=/tmp/tmpfs/%d/ '\
+                       '--enable-benchmarking --enable-net-benchmarking'%(self.debug_port, self.debug_port)
 
             chrome_command = '%s %s' % (CHROME, options)
             logging.debug('Starting Chrome: %s', chrome_command)

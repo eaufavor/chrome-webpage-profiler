@@ -304,7 +304,7 @@ class FirefoxLoader(Loader):
 
 
 
-    def _setup(self):
+    def _setup(self, __=0):
 
         if self._headless:
             # start a virtual display
