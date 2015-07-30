@@ -112,7 +112,7 @@ def start_parallel_instances(default, job_queue, result_queue):
         worker.daemon = True
         logging.info('Starting worker: %s', worker.name)
         worker.start()
-    daemon = Process(name='daemon', target=loader_worker, args=(workers, job_queue))
+    daemon = Process(name='daemon', target=daemon_process, args=(workers, job_queue))
     daemon.start()
     return workers
 
