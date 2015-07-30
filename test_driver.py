@@ -4,6 +4,7 @@ import os, sys, logging, argparse, pprint, json, time
 from chrome_loader import ChromeLoader
 from firefox_loader import FirefoxLoader
 from multiprocessing import Process, JoinableQueue
+import threading
 from loader import LoadResult
 import traceback
 
@@ -112,7 +113,8 @@ def start_parallel_instances(default, job_queue, result_queue):
         worker.daemon = True
         logging.info('Starting worker: %s', worker.name)
         worker.start()
-    daemon = Process(name='daemon', target=daemon_process, args=(workers, job_queue))
+    daemon =  threading.Thread(name='daemon', target=daemon_process, args=(workers, job_queue))
+    daemon.daemon = True
     daemon.start()
     return workers
 
