@@ -145,7 +145,7 @@ def main(fileName):
         def terminate_jobs(_, __):
             logging.warning("SIGINT: terminating all the intances ")
             for worker in workers:
-                os.kill(worker.pid, signal.SIGINT)
+                worker.terminate()
             sys.exit(-1)
         signal.signal(signal.SIGINT, terminate_jobs)
         #loader = ChromeLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],

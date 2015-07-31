@@ -374,7 +374,7 @@ class Loader(object):
         self.tcpdump_proc = None
 
         signal.signal(signal.SIGINT, self.handle_kill)
-        #signal.signal(signal.SIGTERM, self.handle_kill)
+        signal.signal(signal.SIGTERM, self.handle_kill)
 
 
     ##
