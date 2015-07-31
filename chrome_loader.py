@@ -185,10 +185,10 @@ class ChromeLoader(Loader):
             self._chrome_proc.wait()
 
         # kill any subprocesses chrome might have opened
-        try:
-            subprocess.check_output('killall chrome'.split(), stderr=self._devnull)
-        except Exception as e:
-            logging.info('Cannot Kill all remaining chrome processes (maybe there were none): %s', e)
+        #try:
+        #    subprocess.check_output('killall chrome'.split(), stderr=self._devnull)
+        #except Exception as e:
+        #    logging.info('Cannot Kill all remaining chrome processes (maybe there were none): %s', e)
 
         if self._xvfb_proc:
             logging.debug('Stopping XVFB')

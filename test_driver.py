@@ -65,7 +65,7 @@ def loader_worker(my_id, default, job_queue, result_queue):
             result = loader.load_page(testJob[0], testJob[1])
             if result:
                 result_queue.put(result)
-            if result.status == LoadResult.FAILURE_TIMEOUT:
+            if result.status != LoadResult.SUCCESS:
                 loader.teardown()
                 if not loader.setup(my_id):
                     logging.error('Error setting up loader')
