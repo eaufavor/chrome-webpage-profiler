@@ -4,7 +4,7 @@ import os, sys, logging, argparse, pprint, json, time
 from chrome_loader import ChromeLoader
 from firefox_loader import FirefoxLoader
 from multiprocessing import Process, JoinableQueue
-import threading
+import threading, signal
 from loader import LoadResult
 import traceback
 
@@ -141,6 +141,12 @@ def main(fileName):
     if default['browser'].lower() == 'chrome':
         start_parallel_instances(default, jobQueue, resultQueue)
         dispatch_parallel_tests(tests, jobQueue)
+
+        def terminate_jobs(_, __):
+            teardown_parallel_instances(default, jobQueue)
+            jobQueue.join()
+            sys.exit(-1)
+        signal.signal(signal.SIGINT, terminate_jobs)
         #loader = ChromeLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
         #                      check_protocol_availability=False, save_packet_capture=True,
         #                      log_ssl_keys=default['log_ssl_keys'], save_har=True, disable_local_cache=False,
