@@ -139,12 +139,13 @@ def main(fileName):
     resultQueue = JoinableQueue()
     # NOTE: some parameters are obsolete as they are overruled by the settings in tests
     if default['browser'].lower() == 'chrome':
-        start_parallel_instances(default, jobQueue, resultQueue)
+        workers = start_parallel_instances(default, jobQueue, resultQueue)
         dispatch_parallel_tests(tests, jobQueue)
 
         def terminate_jobs(_, __):
-            teardown_parallel_instances(default, jobQueue)
-            jobQueue.join()
+            logging.warning("SIGINT: terminating all the intances ")
+            for worker in workers:
+                os.kill(worker.pid, signal.SIGINT)
             sys.exit(-1)
         signal.signal(signal.SIGINT, terminate_jobs)
         #loader = ChromeLoader(disable_quic=default['disable_quic'], disable_spdy=default['disable_spdy'],
