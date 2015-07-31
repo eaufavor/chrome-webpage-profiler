@@ -486,6 +486,7 @@ class Loader(object):
         return self.__teardown()
 
     def handle_kill(self, __, _):
+        self.teardown()
         raise KeyboardInterrupt('To be killed')
 
     def __getstate__(self):
