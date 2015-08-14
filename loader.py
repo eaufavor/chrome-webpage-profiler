@@ -288,6 +288,7 @@ class PageResult(object):
 ################################################################################
 
 class Loader(object):
+    # NOTE: some parameters of the init function are obsolete
     '''Superclass for URL loader. Subclasses implement actual page load
     functionality (e.g., using Chrome, PhantomJS, etc.).
 
@@ -373,6 +374,8 @@ class Loader(object):
 
         self.tcpdump_proc = None
 
+        # nicely teardown
+        # NOTE: do not SIGKILL
         signal.signal(signal.SIGINT, self.handle_kill)
         signal.signal(signal.SIGTERM, self.handle_kill)
 
@@ -380,6 +383,10 @@ class Loader(object):
     ##
     ## Internal helper methods
     ##
+
+    # These two functions define how the loader names result files
+    # They are duplicated multiple times in other components of the whole test suite
+    # NOTE: change all of them if one wants to update them
     def _sanitize_url(self, url):
         '''Returns a version of the URL suitable for use in a file name.'''
         return re.sub(r'[/\;,><&*:%=+@!#^()|?^]', '-', url)
@@ -467,6 +474,7 @@ class Loader(object):
         return self._setup(my_id)
 
     def setup(self, my_id=0):
+        # my_id is a unique value to avoid multiple browsers using the same port
         return self.__setup(my_id)
 
     def _teardown(self):
@@ -530,25 +538,36 @@ class Loader(object):
     ##
 
     def load_page(self, the_test, trial_number):
+        # run a single test
+
         test = dict(the_test)
         url = test['url']
         url = self._check_url(url)
         i = trial_number
+
         try:
             # if load fails, keep trying self._retries_per_trial times
             tries_so_far = 0
             while tries_so_far <= self._retries_per_trial:
                 tries_so_far += 1
+
+                # handle preload first
                 if test['preload']:
                     self._preload_objects(test['preload'], test['fresh_view'])
-                    # clean cache in preload, should not clean the preloaded objects
+
+                    # avoid clear cache again after preload
                     test['fresh_view'] = False
                 # start tcpdump if we want a packet capture
                 if test['save_packet_capture']:
+
+                    # the prefix of the pcap file
                     prefix = test['packet_capture_file_name']
                     if not prefix:
                         prefix = url
                     pcap_path = self._outfile_path(prefix, suffix='.pcap', trial=i)
+
+                    # start dump, for now we just filter out port 22
+                    # could be only 80 and 443
                     tcpdump_command = [TCPDUMP, '-w', pcap_path, 'port not 22']
                     logging.debug('Starting tcpdump: %s', ' '.join(tcpdump_command))
                     self.tcpdump_proc = subprocess.Popen(tcpdump_command,\
@@ -556,12 +575,17 @@ class Loader(object):
                     # sometimes tcpdump is slower than chrome to startup
                     sleep(0.5)
 
-                # load the page
+                # load the page, this function is overrided by ChromeLoader and FirefoxLoader
                 result = self._load_page(test, self._outdir, i)
+
                 try:
                     if test['save_screenshot']:
                         prefix = test['screenshot_name'] if test['screenshot_name'] else url
                         sspath = self._outfile_path(prefix, suffix='.png', trial=i)
+
+                        # the best way is to use 'scrot -u' which capture the current focused
+                        # window instead of the full screen. But it sometimes fails maybe because
+                        # the window loses focus, so we fallback to take full screen
                         if self.__class__.__name__ == 'FirefoxLoader':
                             cmd = [SCREENSHOT, sspath]
                         else:
@@ -605,8 +629,6 @@ class Loader(object):
 
     def load_pages(self, tests):
         '''Load each URL in `urls` `num_trials` times and collect stats.
-
-        :param urls: list of URLs to load
         '''
         self.tcpdump_proc = None  # if we use tcpdump, keep a handle to the process
         try:
