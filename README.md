@@ -1,3 +1,28 @@
+# Chrome webpage profiler
+A browser based web test automation tool
+
+
+
+### The test driver
+```
+usage: test_driver.py [-h] [-o OUTDIR] [-q] [-v] tests
+
+Web page profiler.
+
+positional arguments:
+  tests                 A json file that describes the web page tests. See
+                        README.md for details
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTDIR, --outdir OUTDIR
+                        (obsolete) Destination directory for HAR files.
+                        (default: .)
+  -q, --quiet           only print errors (default: False)
+  -v, --verbose         print debug info. --quiet wins if both are present
+                        (default: False)
+```
+
 ### The format of `tests.json`
 `tests.json` has two sections:
 1. `tests`: is a list of all the tests to be executed
